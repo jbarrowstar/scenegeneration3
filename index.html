@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Aerial Scene Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+        canvas { display: block; }
+        #upload { position: absolute; top: 10px; left: 10px; padding: 10px; background: white; z-index: 10; }
+        #instructions { position: absolute; top: 50px; left: 10px; padding: 10px; background: white; z-index: 10; }
+    </style>
+</head>
+<body>
+
+<input type="file" id="upload" accept="image/*" />
+<div id="instructions">
+    <p><strong>Keyboard Controls:</strong></p>
+    <p>W/S: Tilt Forward/Backward</p>
+    <p>A/D: Rotate Left/Right</p>
+    <p>Q/E: Rotate Around Z-Axis</p>
+</div>
+
+<script>
+    // Scene setup
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Orbit controls
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    // Add lighting
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(5, 5, 5).normalize();
+    scene.add(light);
+
+    let terrain; // Placeholder for terrain mesh
+
+    // Handle Image Upload
+    document.getElementById('upload').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const textureLoader = new THREE.TextureLoader();
+            textureLoader.load(e.target.result, function(texture) {
+                if (terrain) scene.remove(terrain); // Remove previous terrain
+
+                // Create terrain with uploaded image as texture
+                const geometry = new THREE.PlaneGeometry(10, 10, 50, 50); // Grid for realism
+                const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+                terrain = new THREE.Mesh(geometry, material);
+
+                terrain.rotation.x = -Math.PI / 2; // Make it horizontal
+                scene.add(terrain);
+            });
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // Position camera
+    camera.position.set(0, 5, 10);
+    camera.lookAt(0, 0, 0);
+
+    // Keyboard Controls for Rotation & Tilt
+    document.addEventListener('keydown', function(event) {
+        if (!terrain) return;
+
+        const rotationSpeed = 0.05;
+
+        switch (event.key.toLowerCase()) {
+            case 'w': // Tilt forward
+                terrain.rotation.x += rotationSpeed;
+                break;
+            case 's': // Tilt backward
+                terrain.rotation.x -= rotationSpeed;
+                break;
+            case 'a': // Rotate left
+                terrain.rotation.y += rotationSpeed;
+                break;
+            case 'd': // Rotate right
+                terrain.rotation.y -= rotationSpeed;
+                break;
+            case 'q': // Rotate counterclockwise around Z-axis
+                terrain.rotation.z += rotationSpeed;
+                break;
+            case 'e': // Rotate clockwise around Z-axis
+                terrain.rotation.z -= rotationSpeed;
+                break;
+        }
+    });
+
+    // Animation loop
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+    }
+    animate();
+</script>
+
+</body>
+</html>
